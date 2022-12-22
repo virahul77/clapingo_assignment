@@ -13,7 +13,7 @@ const studendSchema = mongoose.Schema({
         trim : true,
         unique : true,
         match: [
-            /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
+            /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
             "Please enter a valid email",
         ],
     },
@@ -23,9 +23,24 @@ const studendSchema = mongoose.Schema({
         minLength: [6, "Password must be up to 6 characters"],
     },
     favouriteTeachers : [{
-        type : mongoose.Schema.Types.ObjectId,
-        ref : "Teacher",
-        unique : true,
+        name: {
+            type: String,
+            required : true,
+        },
+        subject: {
+            type: String,
+            required : true,
+        },
+        teacherId:{
+            type : mongoose.Schema.Types.ObjectId,
+            ref : "Teacher",
+        },
+        scale : {
+            type: Number,
+            min : [1,'please enter a value within 1-10'],
+            max : [10,'please enter a value within 1-10'],
+            default : 5
+        }
     }]
 },{timestamps:true});
 

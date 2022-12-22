@@ -31,4 +31,5 @@ const teacherRegister = asyncHandler(async (req,res) => {
     });
 })
 
+
 module.exports = {teacherRegister}

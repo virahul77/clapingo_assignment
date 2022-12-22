@@ -1,11 +1,11 @@
 const asyncHandler = require('express-async-handler');
-const Student = require('../models/studentModel');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+
+const Student = require('../models/studentModel');
 const Teacher = require('../models/teacherModel');
 
 const generateToken = (id) => {
-    // console.log(process.env.JWT_SECRET_KEY);
     return jwt.sign({ id }, process.env.JWT_SECRET_KEY, { expiresIn: "2d" });
 };
 
@@ -33,7 +33,7 @@ const studentLogin = asyncHandler(async (req,res) => {
     }
     const user = await Student.findOne({email});
     if(!user) return res.status(404).json({message: "Student not found. Please signup"});
-    console.log(user);
+    // console.log(user);
     //compare with DB password
     const compare = await bcrypt.compare(password,user.password);
     if(!compare) return res.status(403).json({message: "Invalid password"});
@@ -50,17 +50,22 @@ const addFavoriteTeacher = asyncHandler(async (req,res)=> {
     // console.log(req.user);
     const user = await Student.findById(req.user._id).select('-password');
     const find = user.favouriteTeachers.find(item => {
-        return item._id.toString() === teacherId;
+        return item.teacherId.toString() === teacherId;
     });
     if(find) return res.status(400).json({message:"This teacher is already in your favorite list"});
-    user.favouriteTeachers.push(teacherId);
+    user.favouriteTeachers.push({
+        name: teacher.name,
+        teacherId:teacher._id,
+        scale : req.body.scale || 5,
+        subject: teacher.subject
+    });
     const updatedUser = await user.save();
 
     return res.status(200).json(updatedUser);
 })
 
 const getAllTeachers = asyncHandler(async (req,res) => {
-    const allTeachers = await Teacher.find({}).select('_id name email');
+    const allTeachers = await Teacher.find({}).select('_id name email subject');
     return res.status(200).json(allTeachers);
 })
 
@@ -72,13 +77,49 @@ const deleteTeacher = asyncHandler(async (req,res) => {
     // console.log(req.user);
     const user = await Student.findById(req.user._id).select('-password');
     const find = user.favouriteTeachers.find(item => {
-        return item._id.toString() === teacherId;
+        return item.teacherId.toString() === teacherId;
     });
-    if(!find) return res.status(404).json({message:"This teacher is not in your favourite list"});
-    user.favouriteTeachers = user.favouriteTeachers.filter(item => item._id.toString() !== teacherId);
+    if(!find) return res.status(400).json({message:"Teacher not found"});
+    user.favouriteTeachers = user.favouriteTeachers.filter(item=> item.teacherId.toString() !== teacherId);
     const updatedUser = await user.save();
     if(!updatedUser) return res.status(500).json({message:"database error"});
     return res.status(200).json({message:'teacher deleted successfully',user:updatedUser});
 })
 
-module.exports = {studentLogin,studentRegister,addFavoriteTeacher,getAllTeachers,deleteTeacher}
+const mostFavoriteTeacher = asyncHandler(async (req,res) => {
+    // const user = await Student.aggregate([
+    //     {$match : {_id: req.user_id}},
+    //     // {$unwind : "$favouriteTeachers"},
+    //     {$group: {
+    //         _id:null,
+    //         mostFavouriteTeacher : {$max : "$favouriteTeachers.scale"}
+    //     }}
+    // ]);
+    const user = await Student.findById(req.user._id);
+
+    const teachers = user.favouriteTeachers;
+    // console.log(teachers);
+    if(teachers.length === 0) return res.status(200).send('no teachers added');
+    let mostLikedTeacher={};
+    let mostCount = 0;
+    // console.log(teachers);
+    teachers.forEach(teacher => {
+        if(teacher.scale > mostCount) {
+            mostCount = teacher.scale;
+            mostLikedTeacher = teacher;
+        }
+    })
+    // console.log(mostLikedTeacher);
+
+
+    return res.status(200).json(mostLikedTeacher);
+
+})
+
+const getStudentDetails = asyncHandler(async (req,res) => {
+    const user = await Student.findById(req.user._id).select('-password');
+    res.status(200).json(user);
+})
+
+
+module.exports = {studentLogin,studentRegister,addFavoriteTeacher,getAllTeachers,deleteTeacher,mostFavoriteTeacher,getStudentDetails}
