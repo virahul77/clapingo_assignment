@@ -87,33 +87,16 @@ const deleteTeacher = asyncHandler(async (req,res) => {
 })
 
 const mostFavoriteTeacher = asyncHandler(async (req,res) => {
-    // const user = await Student.aggregate([
-    //     {$match : {_id: req.user_id}},
-    //     // {$unwind : "$favouriteTeachers"},
-    //     {$group: {
-    //         _id:null,
-    //         mostFavouriteTeacher : {$max : "$favouriteTeachers.scale"}
-    //     }}
-    // ]);
-    const user = await Student.findById(req.user._id);
+    const user = await Student.aggregate([
+        {$match : {_id: req.user._id}},
+        {$unwind:"$favouriteTeachers"},
+        {$sort: {
+            "favouriteTeachers.scale" : -1
+        }}
+    ]);
 
-    const teachers = user.favouriteTeachers;
-    // console.log(teachers);
-    if(teachers.length === 0) return res.status(200).send('no teachers added');
-    let mostLikedTeacher={};
-    let mostCount = 0;
-    // console.log(teachers);
-    teachers.forEach(teacher => {
-        if(teacher.scale > mostCount) {
-            mostCount = teacher.scale;
-            mostLikedTeacher = teacher;
-        }
-    })
-    // console.log(mostLikedTeacher);
-
-
-    return res.status(200).json(mostLikedTeacher);
-
+    if(!user[0]) return res.status(404).json({msg:"no teacher added to favorite"})
+    return res.status(200).json(user[0].favouriteTeachers);
 })
 
 const getStudentDetails = asyncHandler(async (req,res) => {
